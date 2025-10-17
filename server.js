@@ -130,7 +130,8 @@ app.use(
 );
 
 // ✅ Handle preflight requests explicitly
-app.options("*", cors());
+app.options(/.*/, cors());
+
 
 
 // 4️⃣ JSON parser and static files
