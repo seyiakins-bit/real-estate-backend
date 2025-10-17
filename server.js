@@ -71,6 +71,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const { PrismaClient } = require("@prisma/client"); // ✅ FIXED import
+
 const cloudinary = require("cloudinary").v2;
 
 dotenv.config();
