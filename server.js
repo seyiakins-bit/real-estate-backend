@@ -29,7 +29,7 @@ try {
 // Make sure the frontend URL matches your dev server (CRA = 3000, Vite = 5174)
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://real-estate-alpha-gules.vercel.app"], // allow both Vite & CRA
+    origin: ["http://localhost:5173", "https://real-estate-frontend-nu-one.vercel.app/"], // allow both Vite & CRA
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
