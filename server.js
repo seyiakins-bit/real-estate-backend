@@ -95,16 +95,43 @@ try {
 }
 
 // 3️⃣ CORS Middleware
+// app.use(
+//   cors({
+//     origin: [
+//       "http://localhost:5173", // local dev
+//       "https://real-estate-frontend-nu-one.vercel.app", // ✅ no trailing slash
+//     ],
+//     credentials: true,
+//     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   })
+// );
+
+
+// 3️⃣ CORS Middleware
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://real-estate-frontend-nu-one.vercel.app",
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173", // local dev
-      "https://real-estate-frontend-nu-one.vercel.app", // ✅ no trailing slash
-    ],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.log("❌ CORS blocked for origin:", origin);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+// ✅ Handle preflight requests explicitly
+app.options("*", cors());
+
 
 // 4️⃣ JSON parser and static files
 app.use(express.json());
