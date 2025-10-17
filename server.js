@@ -116,9 +116,9 @@ const propertyRoutes = require("./src/routes/propertyRoutes");
 const contactRoutes = require("./src/routes/contactRoutes");
 
 // 6️⃣ Use routes
-app.use("/api/auth", authRoutes);
-app.use("/api/properties", propertyRoutes);
-app.use("/api/contact", contactRoutes);
+app.use("/", authRoutes);
+app.use("/", propertyRoutes);
+app.use("/", contactRoutes);
 
 // 7️⃣ Test route
 app.get("/", (req, res) => {
