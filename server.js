@@ -67,7 +67,6 @@
 // });
 
 
-//   server.js 
 const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
@@ -99,7 +98,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173", // local dev
-      "https://real-estate-frontend-nu-one.vercel.app" // ✅ no trailing slash
+      "https://real-estate-frontend-nu-one.vercel.app", // ✅ no trailing slash
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
