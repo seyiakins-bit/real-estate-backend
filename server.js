@@ -57,7 +57,7 @@
 // // 8️⃣ Global error handler
 // app.use((err, req, res, next) => {
 //   console.error("Global error:", err.stack);
-//   res.status(500).json({ error: err.message || "Something went wrong!" });
+//   res.status(500).json({ error: err.message || "Somethingg went wrong!" });
 // });
 
 // // 9️⃣ Start server
