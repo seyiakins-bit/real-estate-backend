@@ -110,7 +110,7 @@ try {
 // 3️⃣ CORS Middleware
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://real-estate-frontend-nu-one.vercel.app/",
+  "https://real-estate-frontend-nu-one.vercel.app",
 ];
 
 app.use(
