@@ -1,9 +1,16 @@
 // src/routes/authRoutes.js
 const express = require("express");
 const router = express.Router();
-const { registerUser, loginUser } = require("../controllers/authController");
+const {
+  registerUser,
+  loginUser,
+  registerAdmin,
+} = require("../controllers/authController");
 
-// Auth routes
+// ✅ Admin registration route
+router.post("/register-admin", registerAdmin);
+
+// ✅ Normal user routes
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 

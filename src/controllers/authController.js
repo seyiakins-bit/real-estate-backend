@@ -1,5 +1,4 @@
 // src/controllers/authController.js
-// const { PrismaClient } = require("../../generated/prisma");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require("bcryptjs");
@@ -8,10 +7,12 @@ const jwt = require("jsonwebtoken");
 const JWT_SECRET = process.env.JWT_SECRET || "secretkey";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
+/**
+ * ✅ Register User (normal)
+ */
 const registerUser = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-    console.log("reqbody:", req.body);
 
     if (!name || !email || !password) {
       return res
@@ -41,6 +42,9 @@ const registerUser = async (req, res) => {
   }
 };
 
+/**
+ * ✅ Login User (admin or normal)
+ */
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -67,4 +71,51 @@ const loginUser = async (req, res) => {
   }
 };
 
-module.exports = { registerUser, loginUser };
+/**
+ * ✅ Register Admin (protected by ADMIN_SECRET_KEY)
+ */
+const registerAdmin = async (req, res) => {
+  try {
+    const { name, email, password, adminKey } = req.body;
+
+    // check secret key
+    if (adminKey !== process.env.ADMIN_SECRET_KEY) {
+      return res.status(403).json({ message: "Unauthorized: Invalid admin key" });
+    }
+
+    if (!name || !email || !password)
+      return res
+        .status(400)
+        .json({ message: "Name, email, and password are required" });
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser)
+      return res.status(400).json({ message: "Admin already exists" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const admin = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "ADMIN",
+      },
+    });
+
+    const token = jwt.sign({ userId: admin.id, role: "ADMIN" }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
+
+    res.status(201).json({
+      message: "Admin registered successfully",
+      token,
+      user: admin,
+    });
+  } catch (error) {
+    console.error("Register admin error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = { registerUser, loginUser, registerAdmin };
