@@ -1,4 +1,3 @@
-// src/controllers/authController.js
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const bcrypt = require("bcryptjs");
@@ -26,16 +25,28 @@ const registerUser = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Default role: user (except if ADMIN specified)
+    const assignedRole =
+      role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER";
+
     const user = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role: role?.toUpperCase() === "ADMIN" ? "ADMIN" : "USER",
+        role: assignedRole,
       },
     });
 
-    res.status(201).json({ message: "User created successfully", user });
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role.toLowerCase(),
+      },
+    });
   } catch (error) {
     console.error("Register error:", error);
     res.status(500).json({ message: "Server error" });
@@ -60,11 +71,32 @@ const loginUser = async (req, res) => {
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+    // Ensure admin email always has admin role
+    let userRole = user.role?.toLowerCase() || "user";
+    if (email === "noreply.akinsluxury@gmail.com") {
+      userRole = "admin";
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: "ADMIN" },
+      });
+    }
 
-    res.json({ message: "Login successful", token, user });
+    const token = jwt.sign(
+      { userId: user.id, role: userRole },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+
+    res.json({
+      message: "Login successful",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: userRole,
+      },
+    });
   } catch (error) {
     console.error("Login error:", error);
     res.status(500).json({ message: "Server error" });
@@ -78,7 +110,6 @@ const registerAdmin = async (req, res) => {
   try {
     const { name, email, password, adminKey } = req.body;
 
-    // check secret key
     if (adminKey !== process.env.ADMIN_SECRET_KEY) {
       return res.status(403).json({ message: "Unauthorized: Invalid admin key" });
     }
@@ -103,14 +134,21 @@ const registerAdmin = async (req, res) => {
       },
     });
 
-    const token = jwt.sign({ userId: admin.id, role: "ADMIN" }, JWT_SECRET, {
-      expiresIn: JWT_EXPIRES_IN,
-    });
+    const token = jwt.sign(
+      { userId: admin.id, role: "admin" },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
 
     res.status(201).json({
       message: "Admin registered successfully",
       token,
-      user: admin,
+      user: {
+        id: admin.id,
+        name: admin.name,
+        email: admin.email,
+        role: "admin",
+      },
     });
   } catch (error) {
     console.error("Register admin error:", error);
