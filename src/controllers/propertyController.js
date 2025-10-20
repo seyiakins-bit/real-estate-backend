@@ -1,5 +1,4 @@
 // src/controllers/propertyController.js
-// const { PrismaClient } = require("../../generated/prisma");
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
@@ -34,43 +33,11 @@ const getPropertyById = async (req, res) => {
 };
 
 // CREATE property
-// CREATE property
 const createProperty = async (req, res) => {
-  const { title, description, price, location, ownerId, image } = req.body;
+  const { title, description, price, location, ownerId, images } = req.body;
 
-  console.log("reqbody", req.body);
-  
-
-  // if (!title || !description || !price || !location || !ownerId) {
-  //   return res
-  //     .status(400)
-  //     .json({ message: "All fields including ownerId are required" });
-  // }
-
-  if (!title) {
-    return res
-      .status(400)
-      .json({ message: "Tittle field required" });
-  }
-  if (!description) {
-    return res
-      .status(400)
-      .json({ message: "Description field required" });
-  }
-  if (!price) {
-    return res
-      .status(400)
-      .json({ message: " Price field required" });
-  }
-  if (!location) {
-    return res
-      .status(400)
-      .json({ message: " Location field required" });
-  }
-  if (!ownerId) {
-    return res
-      .status(400)
-      .json({ message: " OwnerId field required" });
+  if (!title || !description || !price || !location || !ownerId) {
+    return res.status(400).json({ message: "All fields including ownerId are required" });
   }
 
   try {
@@ -81,14 +48,12 @@ const createProperty = async (req, res) => {
         price: parseFloat(price),
         location,
         owner: { connect: { id: Number(ownerId) } },
-        image: image || (req.file ? `/uploads/${req.file.filename}` : null), // accept Cloudinary URL or uploaded file
+        images: images || (req.file ? [`/uploads/${req.file.filename}`] : []),
       },
       include: { owner: true },
     });
 
-    res
-      .status(201)
-      .json({ message: "Property created successfully", property });
+    res.status(201).json({ message: "Property created successfully", property });
   } catch (error) {
     console.error("Create property error:", error);
     res.status(500).json({ message: "Server error" });
@@ -98,17 +63,24 @@ const createProperty = async (req, res) => {
 // UPDATE property
 const updateProperty = async (req, res) => {
   const { id } = req.params;
-  const { title, description, price, location } = req.body;
+  const { title, description, price, location, images } = req.body;
 
   try {
+    // Get existing property to preserve existing images if needed
+    const existingProperty = await prisma.property.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existingProperty) return res.status(404).json({ message: "Property not found" });
+
     const property = await prisma.property.update({
       where: { id: Number(id) },
       data: {
-        title,
-        description,
-        price: price ? parseFloat(price) : undefined,
-        location,
-        image: req.file ? `/uploads/${req.file.filename}` : undefined,
+        title: title || existingProperty.title,
+        description: description || existingProperty.description,
+        price: price ? parseFloat(price) : existingProperty.price,
+        location: location || existingProperty.location,
+        images: images || existingProperty.images,
       },
       include: { owner: true },
     });
