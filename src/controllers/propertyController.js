@@ -34,8 +34,9 @@ const getPropertyById = async (req, res) => {
 
 // CREATE property
 const createProperty = async (req, res) => {
-  const { title, description, price, location, ownerId, images } = req.body;
+  const { title, description, price, location, ownerId, images, image } = req.body;
 
+  // Validate required fields
   if (!title || !description || !price || !location || !ownerId) {
     return res.status(400).json({ message: "All fields including ownerId are required" });
   }
@@ -48,7 +49,7 @@ const createProperty = async (req, res) => {
         price: parseFloat(price),
         location,
         owner: { connect: { id: Number(ownerId) } },
-        images: images || (req.file ? [`/uploads/${req.file.filename}`] : []),
+        images: images || (image ? [image] : []), // Accept single image or array
       },
       include: { owner: true },
     });
@@ -63,10 +64,10 @@ const createProperty = async (req, res) => {
 // UPDATE property
 const updateProperty = async (req, res) => {
   const { id } = req.params;
-  const { title, description, price, location, images } = req.body;
+  const { title, description, price, location, images, image } = req.body;
 
   try {
-    // Get existing property to preserve existing images if needed
+    // Get existing property
     const existingProperty = await prisma.property.findUnique({
       where: { id: Number(id) },
     });
@@ -80,7 +81,7 @@ const updateProperty = async (req, res) => {
         description: description || existingProperty.description,
         price: price ? parseFloat(price) : existingProperty.price,
         location: location || existingProperty.location,
-        images: images || existingProperty.images,
+        images: images || (image ? [image] : existingProperty.images),
       },
       include: { owner: true },
     });
