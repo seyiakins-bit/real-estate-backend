@@ -8,30 +8,36 @@ const {
   deleteProperty,
 } = require("../controllers/propertyController");
 
-// Middleware placeholder for authentication (optional but recommended)
+// Optional: authentication middleware for regular users
 const authenticate = (req, res, next) => {
-  // Example: check JWT token in Authorization header
   const authHeader = req.headers.authorization;
+
+  // Allow admin bypass: if isAdmin=true in body, skip auth
+  if (req.body.isAdmin) return next();
+
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({ message: "Unauthorized" });
   }
-  // Add token verification logic here...
+
+  // TODO: Add JWT verification logic here to populate req.user
+  // e.g., req.user = decodedToken.user;
+
   next();
 };
 
-// GET all properties
-router.get("/", authenticate, getProperties);
+// GET all properties (no restriction)
+router.get("/", getProperties);
 
-// GET single property by ID
-router.get("/:id", authenticate, getPropertyById);
+// GET single property by ID (no restriction)
+router.get("/:id", getPropertyById);
 
 // POST new property
-router.post("/", authenticate, createProperty);
+router.post("/", createProperty); // controller handles admin or user auth
 
 // PUT update property
-router.put("/:id", authenticate, updateProperty);
+router.put("/:id", updateProperty); // controller handles admin or user auth
 
 // DELETE property
-router.delete("/:id", authenticate, deleteProperty);
+router.delete("/:id", deleteProperty); // controller handles admin or user auth
 
 module.exports = router;
