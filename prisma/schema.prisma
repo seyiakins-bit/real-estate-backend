@@ -35,17 +35,18 @@ model Property {
   description String
   price       Float
   location    String
-  images      String[]   // ✅ multiple Cloudinary URLs
+  images      String[]
   bedrooms    Int?
   bathrooms   Int?
-  size        Float?    
+  size        Float?
   isAvailable Boolean   @default(true)
-  ownerId     Int
-  owner       User      @relation(fields: [ownerId], references: [id])
-  contacts    Contact[] 
+  ownerId     Int?      // make optional
+  owner       User?     @relation(fields: [ownerId], references: [id])
+  contacts    Contact[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
+
 
 
 
