@@ -1,5 +1,4 @@
 // src/controllers/propertyController.js
-
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const cloudinary = require("cloudinary").v2;
@@ -12,7 +11,6 @@ exports.getProperties = async (req, res) => {
     const properties = await prisma.property.findMany({
       orderBy: { createdAt: "desc" },
     });
-
     res.status(200).json(properties);
   } catch (error) {
     console.error("❌ Error fetching properties:", error);
@@ -28,11 +26,7 @@ exports.getPropertyById = async (req, res) => {
     const property = await prisma.property.findUnique({
       where: { id: parseInt(req.params.id) },
     });
-
-    if (!property) {
-      return res.status(404).json({ message: "Property not found" });
-    }
-
+    if (!property) return res.status(404).json({ message: "Property not found" });
     res.status(200).json(property);
   } catch (error) {
     console.error("❌ Error fetching property:", error);
@@ -45,38 +39,51 @@ exports.getPropertyById = async (req, res) => {
 // ----------------------------
 exports.createProperty = async (req, res) => {
   try {
-    let imageUrl = "";
-
-    // If frontend uploads file through Multer
-    if (req.file) {
-      const cloud = await cloudinary.uploader.upload(req.file.path, {
-        folder: "akins_luxury/properties",
-      });
-      imageUrl = cloud.secure_url;
-    }
-
     const { title, description, price, location, ownerId } = req.body;
 
-    // VALIDATION
+    // Validate required fields
     if (!title || !price || !location) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res.status(400).json({ message: "Title, price, and location are required." });
     }
 
+    // Parse numeric values safely
+    const parsedPrice = parseInt(price);
+    const parsedOwnerId = parseInt(ownerId) || 1;
+
+    if (isNaN(parsedPrice)) {
+      return res.status(400).json({ message: "Price must be a valid number." });
+    }
+
+    // Handle Cloudinary upload if file exists
+    let imageUrl = "";
+    if (req.file) {
+      try {
+        const cloud = await cloudinary.uploader.upload(req.file.path, {
+          folder: "akins_luxury/properties",
+        });
+        imageUrl = cloud.secure_url;
+      } catch (cloudErr) {
+        console.error("❌ Cloudinary upload failed:", cloudErr);
+        return res.status(500).json({ message: "Image upload failed." });
+      }
+    }
+
+    // Create property in DB
     const newProperty = await prisma.property.create({
       data: {
         title,
         description,
-        price: parseInt(price),   // Ensure Prisma gets a number
+        price: parsedPrice,
         location,
-        image: imageUrl,          // empty string if missing
-        ownerId: parseInt(ownerId) || 1, // fallback for now
+        image: imageUrl,
+        ownerId: parsedOwnerId,
       },
     });
 
     res.status(201).json(newProperty);
   } catch (error) {
     console.error("❌ Error creating property:", error);
-    res.status(500).json({ message: "Server error creating property" });
+    res.status(500).json({ message: "Server error creating property." });
   }
 };
 
@@ -86,7 +93,6 @@ exports.createProperty = async (req, res) => {
 exports.updateProperty = async (req, res) => {
   try {
     const { title, description, price, location } = req.body;
-
     const updated = await prisma.property.update({
       where: { id: parseInt(req.params.id) },
       data: {
@@ -96,11 +102,10 @@ exports.updateProperty = async (req, res) => {
         location,
       },
     });
-
     res.status(200).json(updated);
   } catch (error) {
     console.error("❌ Error updating property:", error);
-    res.status(500).json({ message: "Server error updating property" });
+    res.status(500).json({ message: "Server error updating property." });
   }
 };
 
@@ -112,10 +117,9 @@ exports.deleteProperty = async (req, res) => {
     await prisma.property.delete({
       where: { id: parseInt(req.params.id) },
     });
-
-    res.status(200).json({ message: "Property deleted" });
+    res.status(200).json({ message: "Property deleted." });
   } catch (error) {
     console.error("❌ Error deleting property:", error);
-    res.status(500).json({ message: "Server error deleting property" });
+    res.status(500).json({ message: "Server error deleting property." });
   }
 };
