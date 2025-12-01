@@ -1,141 +1,121 @@
 // src/controllers/propertyController.js
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
+const cloudinary = require("cloudinary").v2;
 
-// GET all properties
-const getProperties = async (req, res) => {
+// ----------------------------
+// GET ALL PROPERTIES
+// ----------------------------
+exports.getProperties = async (req, res) => {
   try {
     const properties = await prisma.property.findMany({
-      include: { owner: true, contacts: true },
+      orderBy: { createdAt: "desc" },
     });
-    res.json(properties);
+
+    res.status(200).json(properties);
   } catch (error) {
-    console.error("Get properties error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Error fetching properties:", error);
+    res.status(500).json({ message: "Server error fetching properties" });
   }
 };
 
-// GET single property by ID
-const getPropertyById = async (req, res) => {
-  const { id } = req.params;
+// ----------------------------
+// GET ONE PROPERTY
+// ----------------------------
+exports.getPropertyById = async (req, res) => {
   try {
     const property = await prisma.property.findUnique({
-      where: { id: Number(id) },
-      include: { owner: true, contacts: true },
+      where: { id: parseInt(req.params.id) },
     });
-    if (!property)
+
+    if (!property) {
       return res.status(404).json({ message: "Property not found" });
-    res.json(property);
+    }
+
+    res.status(200).json(property);
   } catch (error) {
-    console.error("Get property error:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ Error fetching property:", error);
+    res.status(500).json({ message: "Server error fetching property" });
   }
 };
 
-// CREATE property
-const createProperty = async (req, res) => {
-  const { title, description, price, location, ownerId, images, image, isAdmin } = req.body;
-
-  if (!title || !description || !price || !location) {
-    return res.status(400).json({ message: "Title, description, price, and location are required" });
-  }
-
-  let finalOwnerId;
-
+// ----------------------------
+// CREATE PROPERTY
+// ----------------------------
+exports.createProperty = async (req, res) => {
   try {
-    // Admin bypass: no authentication required
-    if (isAdmin && ownerId) {
-      finalOwnerId = Number(ownerId);
-    } else {
-      // Regular user must be authenticated
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized: login required" });
-      }
+    let imageUrl = "";
 
-      // Only USER role allowed
-      if (req.user.role !== "USER") {
-        return res.status(401).json({ message: "Unauthorized: only regular users allowed" });
-      }
-
-      finalOwnerId = req.user.id;
+    // If frontend uploads file through Multer
+    if (req.file) {
+      const cloud = await cloudinary.uploader.upload(req.file.path, {
+        folder: "akins_luxury/properties",
+      });
+      imageUrl = cloud.secure_url;
     }
 
-    const property = await prisma.property.create({
+    const { title, description, price, location, ownerId } = req.body;
+
+    // VALIDATION
+    if (!title || !price || !location) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const newProperty = await prisma.property.create({
       data: {
         title,
         description,
-        price: parseFloat(price),
+        price: parseInt(price),   // Ensure Prisma gets a number
         location,
-        owner: { connect: { id: finalOwnerId } },
-        images: images || (image ? [image] : []),
+        image: imageUrl,          // empty string if missing
+        ownerId: parseInt(ownerId) || 1, // fallback for now
       },
-      include: { owner: true },
     });
 
-    res.status(201).json({ message: "Property created successfully", property });
+    res.status(201).json(newProperty);
   } catch (error) {
-    console.error("Create property error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Error creating property:", error);
+    res.status(500).json({ message: "Server error creating property" });
   }
 };
 
-// UPDATE property
-const updateProperty = async (req, res) => {
-  const { id } = req.params;
-  const { title, description, price, location, images, image, isAdmin } = req.body;
-
+// ----------------------------
+// UPDATE PROPERTY
+// ----------------------------
+exports.updateProperty = async (req, res) => {
   try {
-    const existingProperty = await prisma.property.findUnique({
-      where: { id: Number(id) },
-    });
+    const { title, description, price, location } = req.body;
 
-    if (!existingProperty) return res.status(404).json({ message: "Property not found" });
-
-    // Admin can update any property
-    // Regular users can only update their own properties
-    if (!isAdmin) {
-      if (!req.user) return res.status(401).json({ message: "Unauthorized: login required" });
-      if (req.user.role !== "USER") return res.status(401).json({ message: "Unauthorized: only regular users allowed" });
-      if (existingProperty.ownerId !== req.user.id)
-        return res.status(403).json({ message: "Forbidden: cannot update others' properties" });
-    }
-
-    const property = await prisma.property.update({
-      where: { id: Number(id) },
+    const updated = await prisma.property.update({
+      where: { id: parseInt(req.params.id) },
       data: {
-        title: title || existingProperty.title,
-        description: description || existingProperty.description,
-        price: price ? parseFloat(price) : existingProperty.price,
-        location: location || existingProperty.location,
-        images: images || (image ? [image] : existingProperty.images),
+        title,
+        description,
+        price: price ? parseInt(price) : undefined,
+        location,
       },
-      include: { owner: true },
     });
 
-    res.json({ message: "Property updated successfully", property });
+    res.status(200).json(updated);
   } catch (error) {
-    console.error("Update property error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("❌ Error updating property:", error);
+    res.status(500).json({ message: "Server error updating property" });
   }
 };
 
-// DELETE property
-const deleteProperty = async (req, res) => {
-  const { id } = req.params;
-
+// ----------------------------
+// DELETE PROPERTY
+// ----------------------------
+exports.deleteProperty = async (req, res) => {
   try {
-    await prisma.property.delete({ where: { id: Number(id) } });
-    res.json({ message: "Property deleted successfully" });
-  } catch (error) {
-    console.error("Delete property error:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-};
+    await prisma.property.delete({
+      where: { id: parseInt(req.params.id) },
+    });
 
-module.exports = {
-  getProperties,
-  getPropertyById,
-  createProperty,
-  updateProperty,
-  deleteProperty,
+    res.status(200).json({ message: "Property deleted" });
+  } catch (error) {
+    console.error("❌ Error deleting property:", error);
+    res.status(500).json({ message: "Server error deleting property" });
+  }
 };
